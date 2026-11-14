@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart Finance Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="top">
+    <h1>Smart Finance Manager</h1>
+    <label class="month-pick">Month <input type="month" id="month"></label>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="dashboard" class="active">Dashboard</button>
+    <button data-tab="transactions">Transactions</button>
+    <button data-tab="budgets">Budgets</button>
+    <button data-tab="debts">Debts &amp; interest</button>
+    <button data-tab="goals">Goals</button>
+  </nav>
+
+  <main>
+    <!-- ============ DASHBOARD ============ -->
+    <section id="dashboard" class="tab active">
+      <div class="hero">
+        <p class="hero-label">You can spend today</p>
+        <p class="hero-number" id="allowance">-</p>
+        <p class="hero-sub" id="allowanceNote">Set budgets to unlock your daily allowance.</p>
+      </div>
+
+      <div class="stats">
+        <div><span>Income</span><strong id="income">-</strong></div>
+        <div><span>Spent</span><strong id="expense">-</strong></div>
+        <div><span>Balance</span><strong id="balance">-</strong></div>
+        <div><span>Health score</span><strong id="score">-</strong><small id="scoreLabel"></small></div>
+      </div>
+
+      <div class="panel">
+        <h2>Quick add</h2>
+        <div class="row">
+          <input id="quickText" placeholder='Type or speak: "Spent 250 on lunch"'>
+          <button id="quickBtn">Add</button>
+          <button id="micBtn" class="ghost" title="Speak">Speak</button>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="panel"><h2>Spending by category</h2><div class="chart-box"><canvas id="catChart"></canvas></div></div>
+        <div class="panel"><h2>Budget vs actual</h2><div class="chart-box"><canvas id="budgetChart"></canvas></div></div>
+      </div>
+
+      <div class="grid2">
+        <div class="panel"><h2>Forecast</h2><p id="forecast">-</p></div>
+        <div class="panel"><h2>Alerts</h2><ul id="alerts" class="plain"></ul></div>
+        <div class="panel"><h2>How to improve</h2><ul id="insights" class="plain"></ul><ul id="tips" class="plain"></ul></div>
+        <div class="panel"><h2>Unusual charges</h2><ul id="anomalies" class="plain"></ul></div>
+        <div class="panel"><h2>Detected subscriptions</h2><ul id="subs" class="plain"></ul></div>
+      </div>
+    </section>
+
+    <!-- ============ TRANSACTIONS ============ -->
+    <section id="transactions" class="tab">
+      <div class="panel">
+        <h2>Add transaction</h2>
+        <form id="txnForm" class="row wrap">
+          <input type="date" id="tDate" required>
+          <input id="tDesc" placeholder="Description (e.g. SWIGGY*ORDER123)" required>
+          <input type="number" id="tAmount" placeholder="Amount" min="0.01" step="0.01" required>
+          <select id="tType"><option value="expense">Expense</option><option value="income">Income</option></select>
+          <input id="tCat" placeholder="Category (blank = auto)">
+          <button type="submit">Save transaction</button>
+        </form>
+        <p class="hint">Import a CSV with columns: date, description, amount, type, category (category optional).
+          <input type="file" id="csvFile" accept=".csv"></p>
+      </div>
+      <div class="panel scroll">
+        <table>
+          <thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="num">Amount</th><th></th></tr></thead>
+          <tbody id="txnBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ BUDGETS ============ -->
+    <section id="budgets" class="tab">
+      <div class="panel">
+        <h2>Monthly limits</h2>
+        <form id="budgetForm" class="row wrap">
+          <input id="bCat" placeholder="Category (e.g. Food)" required>
+          <input type="number" id="bLimit" placeholder="Monthly limit" min="1" required>
+          <button type="submit">Save limit</button>
+          <button type="button" id="suggestBtn" class="ghost">Suggest limits from my history</button>
+        </form>
+      </div>
+      <div class="panel scroll"><div id="budgetList"></div></div>
+    </section>
+
+    <!-- ============ DEBTS ============ -->
+    <section id="debts" class="tab">
+      <div class="panel">
+        <h2>Add loan or credit card</h2>
+        <form id="debtForm" class="row wrap">
+          <input id="dName" placeholder="Name (e.g. HDFC card)" required>
+          <input type="number" id="dBalance" placeholder="Balance owed" min="1" required>
+          <input type="number" id="dRate" placeholder="Interest % per year" min="0" step="0.01" required>
+          <input type="number" id="dMin" placeholder="Minimum monthly payment" min="1" required>
+          <button type="submit">Save debt</button>
+        </form>
+      </div>
+
+      <div class="panel scroll">
+        <table>
+          <thead><tr><th>Debt</th><th class="num">Balance</th><th class="num">Rate</th><th class="num">Interest / month</th><th class="num">Months to clear</th><th class="num">Total interest</th><th></th></tr></thead>
+          <tbody id="debtBody"></tbody>
+        </table>
+        <p id="debtTotal" class="hint"></p>
+      </div>
+
+      <div class="panel">
+        <h2>What if I pay extra?</h2>
+        <label class="slider">Extra per month: <strong id="extraLabel">0</strong>
+          <input type="range" id="extra" min="0" max="20000" step="500" value="0">
+        </label>
+        <div class="grid3" id="compare"></div>
+        <p id="compareNote" class="hint"></p>
+      </div>
+
+      <div class="panel">
+        <h2>Loan and interest calculator</h2>
+        <form id="emiForm" class="row wrap">
+          <input type="number" id="cP" placeholder="Principal" min="1" required>
+          <input type="number" id="cR" placeholder="Rate % per year" min="0" step="0.01" required>
+          <input type="number" id="cM" placeholder="Months" min="1" required>
+          <button type="submit">Calculate EMI</button>
+        </form>
+        <p id="emiResult" class="hint"></p>
+        <form id="siForm" class="row wrap">
+          <input type="number" id="sP" placeholder="Principal" min="1" required>
+          <input type="number" id="sR" placeholder="Rate % per year" min="0" step="0.01" required>
+          <input type="number" id="sY" placeholder="Years" min="0.1" step="0.1" required>
+          <button type="submit">Simple vs compound</button>
+        </form>
+        <p id="siResult" class="hint"></p>
+      </div>
+    </section>
+
+    <!-- ============ GOALS ============ -->
+    <section id="goals" class="tab">
+      <div class="panel">
+        <h2>New goal</h2>
+        <form id="goalForm" class="row wrap">
+          <input id="gName" placeholder="Goal (e.g. Laptop)" required>
+          <input type="number" id="gTarget" placeholder="Target amount" min="1" required>
+          <input type="number" id="gSaved" placeholder="Already saved" min="0" value="0">
+          <input type="date" id="gDeadline" required>
+          <button type="submit">Save goal</button>
+        </form>
+      </div>
+      <div id="goalList"></div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

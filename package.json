@@ -1,0 +1,20 @@
+{
+  "name": "finance-tracker",
+  "version": "1.0.0",
+  "description": "Smart Personal Finance Manager",
+  "main": "backend/main.py",
+  "scripts": {
+    "postinstall": "node setup.js",
+    "start": "node run.js",
+    "dev": "node run.js",
+    "test": "node test.js"
+  },
+  "keywords": [
+    "finance",
+    "budgeting",
+    "fastapi",
+    "chartjs"
+  ],
+  "author": "",
+  "license": "MIT"
+}

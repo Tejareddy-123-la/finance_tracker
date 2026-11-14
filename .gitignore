@@ -1,0 +1,9 @@
+venv/
+.venv/
+backend/venv/
+node_modules/
+__pycache__/
+*.pyc
+backend/finance.db
+finance.db
+.env
