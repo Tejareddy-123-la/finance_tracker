@@ -69,10 +69,10 @@
         <h2>Add transaction</h2>
         <form id="txnForm" class="row wrap">
           <input type="date" id="tDate" required>
-          <input id="tDesc" placeholder="Description (e.g. SWIGGY*ORDER123)" required>
+          <input id="tDesc" placeholder="Description (alphabets only, e.g. Lunch)" pattern="[A-Za-z\s]+" title="Only alphabets and spaces allowed" required>
           <input type="number" id="tAmount" placeholder="Amount" min="0.01" step="0.01" required>
           <select id="tType"><option value="expense">Expense</option><option value="income">Income</option></select>
-          <input id="tCat" placeholder="Category (blank = auto)">
+          <input id="tCat" placeholder="Category (alphabets only, blank = auto)" pattern="[A-Za-z\s]*" title="Only alphabets and spaces allowed">
           <button type="submit">Save transaction</button>
         </form>
         <p class="hint">Import a CSV with columns: date, description, amount, type, category (category optional).
@@ -91,7 +91,7 @@
       <div class="panel">
         <h2>Monthly limits</h2>
         <form id="budgetForm" class="row wrap">
-          <input id="bCat" placeholder="Category (e.g. Food)" required>
+          <input id="bCat" placeholder="Category (alphabets only, e.g. Food)" pattern="[A-Za-z\s]+" title="Only alphabets and spaces allowed" required>
           <input type="number" id="bLimit" placeholder="Monthly limit" min="1" required>
           <button type="submit">Save limit</button>
           <button type="button" id="suggestBtn" class="ghost">Suggest limits from my history</button>
@@ -105,7 +105,7 @@
       <div class="panel">
         <h2>Add loan or credit card</h2>
         <form id="debtForm" class="row wrap">
-          <input id="dName" placeholder="Name (e.g. HDFC card)" required>
+          <input id="dName" placeholder="Name (alphabets only, e.g. Personal Loan)" pattern="[A-Za-z\s]+" title="Only alphabets and spaces allowed" required>
           <input type="number" id="dBalance" placeholder="Balance owed" min="1" required>
           <input type="number" id="dRate" placeholder="Interest % per year" min="0" step="0.01" required>
           <input type="number" id="dMin" placeholder="Minimum monthly payment" min="1" required>
@@ -154,7 +154,7 @@
       <div class="panel">
         <h2>New goal</h2>
         <form id="goalForm" class="row wrap">
-          <input id="gName" placeholder="Goal (e.g. Laptop)" required>
+          <input id="gName" placeholder="Goal (alphabets only, e.g. Laptop)" pattern="[A-Za-z\s]+" title="Only alphabets and spaces allowed" required>
           <input type="number" id="gTarget" placeholder="Target amount" min="1" required>
           <input type="number" id="gSaved" placeholder="Already saved" min="0" value="0">
           <input type="date" id="gDeadline" required>

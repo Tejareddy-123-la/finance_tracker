@@ -15,7 +15,7 @@ from typing import List, Literal, Optional
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 import calculators as calc
 from database import get_conn, init_db
@@ -53,10 +53,36 @@ class Txn(BaseModel):
     type: Literal["income", "expense"]
     category: Optional[str] = None
 
+    @field_validator("description")
+    @classmethod
+    def check_desc(cls, v: str):
+        s = v.strip()
+        if not re.match(r"^[a-zA-Z\s]+$", s):
+            raise ValueError("Description must contain only alphabets and spaces (no numbers).")
+        return s
+
+    @field_validator("category")
+    @classmethod
+    def check_cat(cls, v: Optional[str]):
+        if v:
+            s = v.strip()
+            if not re.match(r"^[a-zA-Z\s]+$", s):
+                raise ValueError("Category must contain only alphabets and spaces (no numbers).")
+            return s
+        return None
+
 
 class Budget(BaseModel):
     category: str = Field(min_length=1)
     monthly_limit: float = Field(gt=0)
+
+    @field_validator("category")
+    @classmethod
+    def check_bcat(cls, v: str):
+        s = v.strip()
+        if not re.match(r"^[a-zA-Z\s]+$", s):
+            raise ValueError("Category must contain only alphabets and spaces (no numbers).")
+        return s
 
 
 class Debt(BaseModel):
@@ -65,12 +91,28 @@ class Debt(BaseModel):
     annual_rate: float = Field(ge=0)
     min_payment: float = Field(gt=0)
 
+    @field_validator("name")
+    @classmethod
+    def check_dname(cls, v: str):
+        s = v.strip()
+        if not re.match(r"^[a-zA-Z\s]+$", s):
+            raise ValueError("Debt name must contain only alphabets and spaces (no numbers).")
+        return s
+
 
 class Goal(BaseModel):
     name: str = Field(min_length=1)
     target: float = Field(gt=0)
     saved: float = Field(ge=0, default=0)
     deadline: str
+
+    @field_validator("name")
+    @classmethod
+    def check_gname(cls, v: str):
+        s = v.strip()
+        if not re.match(r"^[a-zA-Z\s]+$", s):
+            raise ValueError("Goal name must contain only alphabets and spaces (no numbers).")
+        return s
 
 
 class Amount(BaseModel):
@@ -145,7 +187,13 @@ def quick_add(q: Quick):
     if not match:
         raise HTTPException(400, "No amount found. Try: 'Spent 250 on lunch'.")
     is_income = re.search(r"\b(earned|received|salary|credited|got paid|income)\b", q.text.lower())
-    t = Txn(date=date.today().isoformat(), description=q.text.strip(),
+    
+    clean_desc = re.sub(r"[^a-zA-Z\s]", " ", q.text)
+    clean_desc = re.sub(r"\s+", " ", clean_desc).strip()
+    if not clean_desc:
+        clean_desc = "Salary Income" if is_income else "Daily Expense"
+
+    t = Txn(date=date.today().isoformat(), description=clean_desc,
             amount=float(match.group(1)), type="income" if is_income else "expense")
     conn = get_conn()
     insert_txn(conn, t)

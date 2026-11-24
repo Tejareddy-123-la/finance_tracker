@@ -16,11 +16,24 @@ async function api(path, method = "GET", body) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    const msg = typeof err.detail === "string" ? err.detail : "Please check the values you entered.";
+    let msg = "Please check the values you entered.";
+    if (typeof err.detail === "string") {
+      msg = err.detail;
+    } else if (Array.isArray(err.detail) && err.detail[0]?.msg) {
+      msg = err.detail[0].msg;
+    }
     alert(msg);
     throw new Error(msg);
   }
   return res.json();
+}
+
+/* Enforce alphabets and spaces only (disallow numeric digits and special symbols) */
+function restrictToAlphabets(el) {
+  if (!el) return;
+  el.addEventListener("input", () => {
+    el.value = el.value.replace(/[^a-zA-Z\s]/g, "");
+  });
 }
 
 /* ---------------------------------------------------------------- tabs */
@@ -146,10 +159,20 @@ $("txnBody").addEventListener("click", async (e) => {
 
 $("txnForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  const description = $("tDesc").value.trim();
+  const category = ($("tCat").value || "").trim();
+  if (!/^[a-zA-Z\s]+$/.test(description)) {
+    alert("Transaction description must contain only alphabets and spaces (no numbers).");
+    return;
+  }
+  if (category && !/^[a-zA-Z\s]+$/.test(category)) {
+    alert("Category must contain only alphabets and spaces (no numbers).");
+    return;
+  }
   await api("/transactions", "POST", {
-    date: $("tDate").value, description: $("tDesc").value,
+    date: $("tDate").value, description,
     amount: parseFloat($("tAmount").value), type: $("tType").value,
-    category: $("tCat").value || null,
+    category: category || null,
   });
   $("tDesc").value = ""; $("tAmount").value = ""; $("tCat").value = "";
   loadTransactions();
@@ -161,13 +184,19 @@ $("csvFile").addEventListener("change", async (e) => {
   const lines = (await file.text()).split(/\r?\n/).filter((l) => l.trim());
   const items = [];
   for (const line of lines) {
-    const [date, description, amount, type, category] = line.split(",").map((x) => x.trim());
+    let [date, description, amount, type, category] = line.split(",").map((x) => x.trim());
     const value = parseFloat(amount);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !description || !(value > 0)) continue; // skips header/bad rows
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !description || !(value > 0)) continue;
+    // Clean to alphabets and spaces only
+    description = description.replace(/[^a-zA-Z\s]/g, " ").replace(/\s+/g, " ").trim();
+    if (!description) continue;
+    if (category) {
+      category = category.replace(/[^a-zA-Z\s]/g, " ").replace(/\s+/g, " ").trim() || null;
+    }
     items.push({ date, description, amount: value,
       type: (type || "expense").toLowerCase() === "income" ? "income" : "expense", category: category || null });
   }
-  if (!items.length) { alert("No valid rows found. Expected: date(YYYY-MM-DD), description, amount, type, category"); return; }
+  if (!items.length) { alert("No valid rows found. Expected: date(YYYY-MM-DD), description (alphabets only), amount, type, category"); return; }
   const r = await api("/transactions/bulk", "POST", items);
   alert(`Imported ${r.imported} transactions.`);
   e.target.value = "";
@@ -193,7 +222,12 @@ $("budgetList").addEventListener("click", async (e) => {
 });
 $("budgetForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  await api("/budgets", "PUT", { category: $("bCat").value, monthly_limit: parseFloat($("bLimit").value) });
+  const category = $("bCat").value.trim();
+  if (!/^[a-zA-Z\s]+$/.test(category)) {
+    alert("Category must contain only alphabets and spaces (no numbers).");
+    return;
+  }
+  await api("/budgets", "PUT", { category, monthly_limit: parseFloat($("bLimit").value) });
   $("bCat").value = ""; $("bLimit").value = "";
   loadBudgets();
 });
@@ -241,7 +275,12 @@ $("debtBody").addEventListener("click", async (e) => {
 });
 $("debtForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  await api("/debts", "POST", { name: $("dName").value, balance: parseFloat($("dBalance").value),
+  const name = $("dName").value.trim();
+  if (!/^[a-zA-Z\s]+$/.test(name)) {
+    alert("Debt name must contain only alphabets and spaces (no numbers).");
+    return;
+  }
+  await api("/debts", "POST", { name, balance: parseFloat($("dBalance").value),
     annual_rate: parseFloat($("dRate").value), min_payment: parseFloat($("dMin").value) });
   e.target.reset();
   loadDebts();
@@ -283,7 +322,12 @@ $("goalList").addEventListener("click", async (e) => {
 });
 $("goalForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  await api("/goals", "POST", { name: $("gName").value, target: parseFloat($("gTarget").value),
+  const name = $("gName").value.trim();
+  if (!/^[a-zA-Z\s]+$/.test(name)) {
+    alert("Goal name must contain only alphabets and spaces (no numbers).");
+    return;
+  }
+  await api("/goals", "POST", { name, target: parseFloat($("gTarget").value),
     saved: parseFloat($("gSaved").value || 0), deadline: $("gDeadline").value });
   e.target.reset();
   $("gSaved").value = 0;
@@ -291,6 +335,9 @@ $("goalForm").addEventListener("submit", async (e) => {
 });
 
 /* ---------------------------------------------------------------- start */
+["tDesc", "tCat", "bCat", "dName", "gName"].forEach((id) => {
+  restrictToAlphabets($(id));
+});
 $("month").value = today().slice(0, 7);
 $("tDate").value = today();
 $("month").addEventListener("change", () => refresh());
