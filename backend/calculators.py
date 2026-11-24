@@ -5,17 +5,19 @@ from collections import defaultdict
 
 # ---------------------------------------------------------------- categorization
 RULES = {
-    "Income": ["salary", "stipend", "refund", "cashback", "freelance", "bonus"],
-    "Rent": ["rent", "landlord"],
-    "Food": ["swiggy", "zomato", "restaurant", "cafe", "lunch", "dinner", "breakfast",
-             "grocery", "bigbasket", "blinkit", "zepto", "dmart", "snack", "tea", "coffee"],
-    "Transport": ["uber", "ola", "rapido", "petrol", "fuel", "metro", "irctc", "bus", "auto", "cab"],
-    "Bills": ["electricity", "bescom", "recharge", "jio", "airtel", "wifi", "broadband", "gas", "water bill"],
-    "Shopping": ["amazon", "flipkart", "myntra", "ajio", "mall", "shopping"],
-    "Entertainment": ["netflix", "spotify", "hotstar", "prime", "movie", "bookmyshow", "game"],
-    "Health": ["pharmacy", "apollo", "medplus", "hospital", "doctor", "medicine"],
-    "Education": ["course", "udemy", "book", "tuition", "college", "fees"],
-    "Loan EMI": ["emi", "loan"],
+    "Income": ["salary", "stipend", "refund", "cashback", "freelance", "bonus", "interest earned", "dividend", "income"],
+    "Rent": ["rent", "landlord", "flat", "pg", "apartment", "house rent", "maintenance"],
+    "Food": ["food", "swiggy", "zomato", "restaurant", "cafe", "lunch", "dinner", "breakfast",
+             "grocery", "groceries", "bigbasket", "blinkit", "zepto", "dmart", "snack", "snacks",
+             "tea", "coffee", "milk", "bread", "egg", "eggs", "chicken", "meat", "vegetables", "fruits", "hotel", "dine"],
+    "Clothes": ["clothes", "clothing", "cloth", "dress", "shirt", "pant", "pants", "shoes", "footwear", "zara", "hnm"],
+    "Transport": ["uber", "ola", "rapido", "petrol", "fuel", "diesel", "cng", "metro", "irctc", "bus", "auto", "cab", "taxi", "train", "flight", "toll"],
+    "Bills": ["electricity", "bescom", "recharge", "jio", "airtel", "wifi", "broadband", "gas", "water bill", "bill", "utility", "dth"],
+    "Shopping": ["amazon", "flipkart", "myntra", "ajio", "mall", "shopping", "clothes", "clothing", "cloth", "dress", "shirt", "pant", "pants", "shoes", "footwear", "zara", "hnm"],
+    "Entertainment": ["netflix", "spotify", "hotstar", "prime", "movie", "bookmyshow", "game", "cinema", "theatre"],
+    "Health": ["pharmacy", "apollo", "medplus", "hospital", "doctor", "medicine", "clinic", "lab", "diagnostic"],
+    "Education": ["course", "udemy", "book", "books", "tuition", "college", "fees", "school"],
+    "Loan EMI": ["emi", "loan", "credit card", "card payment"],
 }
 
 

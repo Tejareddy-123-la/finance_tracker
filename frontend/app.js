@@ -65,7 +65,16 @@ async function loadDashboard() {
 
   $("income").textContent = inr(s.income);
   $("expense").textContent = inr(s.expense);
-  $("balance").textContent = inr(s.balance);
+  
+  const balEl = $("balance");
+  if (s.balance < 0) {
+    balEl.textContent = "-" + inr(Math.abs(s.balance));
+    balEl.className = "expense";
+  } else {
+    balEl.textContent = inr(s.balance);
+    balEl.className = s.balance > 0 ? "income" : "";
+  }
+  
   $("score").textContent = s.health.score;
   $("scoreLabel").textContent = s.health.label;
 
@@ -206,13 +215,21 @@ $("csvFile").addEventListener("change", async (e) => {
 /* ---------------------------------------------------------------- budgets */
 async function loadBudgets() {
   const [budgets, s] = await Promise.all([api("/budgets"), api("/summary?month=" + $("month").value)]);
-  const spent = Object.fromEntries(s.budget_status.map((b) => [b.category, b]));
+  
+  // Case-insensitive lookup map from summary's budget_status
+  const spent = {};
+  for (const b of (s.budget_status || [])) {
+    spent[b.category.trim().toLowerCase()] = b;
+  }
+
   $("budgetList").innerHTML = budgets.length ? budgets.map((b) => {
-    const st = spent[b.category] || { spent: 0, percent: 0 };
-    const cls = st.percent >= 100 ? "over" : st.percent >= 80 ? "mid" : "";
+    const key = b.category.trim().toLowerCase();
+    const st = spent[key] || { spent: 0, percent: 0 };
+    const pct = st.percent || 0;
+    const cls = pct >= 100 ? "over" : pct >= 80 ? "mid" : "";
     return `<div class="item">
-      <div class="grow"><strong>${esc(b.category)}</strong> ${inr(st.spent)} of ${inr(b.monthly_limit)} (${st.percent}%)
-        <div class="bar"><i class="${cls}" style="width:${Math.min(st.percent, 100)}%"></i></div></div>
+      <div class="grow"><strong>${esc(b.category)}</strong> ${inr(st.spent)} of ${inr(b.monthly_limit)} (${pct}%)
+        <div class="bar"><i class="${cls}" style="width:${Math.min(pct, 100)}%"></i></div></div>
       <button class="danger" data-bdel="${esc(b.category)}">Remove</button></div>`;
   }).join("") : "<p>No budgets yet. Add a limit above, or let the app suggest limits from your history.</p>";
 }

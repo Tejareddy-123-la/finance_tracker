@@ -132,7 +132,8 @@ def check_date(value: str):
 
 def insert_txn(conn, t: Txn):
     check_date(t.date)
-    category = (t.category or "").strip() or calc.categorize(t.description, t.type)
+    raw_cat = (t.category or "").strip()
+    category = (raw_cat or calc.categorize(t.description, t.type)).strip().title()
     conn.execute(
         "INSERT INTO transactions (date, description, amount, type, category) VALUES (?,?,?,?,?)",
         (t.date, t.description.strip(), t.amount, t.type, category),
@@ -215,9 +216,10 @@ def list_budgets():
 @app.put("/api/budgets")
 def set_budget(b: Budget):
     conn = get_conn()
+    cat_title = b.category.strip().title()
     conn.execute("INSERT INTO budgets (category, monthly_limit) VALUES (?, ?) "
                  "ON CONFLICT(category) DO UPDATE SET monthly_limit = excluded.monthly_limit",
-                 (b.category.strip(), b.monthly_limit))
+                 (cat_title, b.monthly_limit))
     conn.commit()
     conn.close()
     return {"ok": True}
@@ -280,10 +282,15 @@ def summary(month: Optional[str] = None):
 
     income = sum(r["amount"] for r in rows if r["type"] == "income")
     expense = sum(r["amount"] for r in rows if r["type"] == "expense")
+    balance = income - expense
+
     by_category = {}
+    by_cat_lower = {}
     for r in rows:
         if r["type"] == "expense":
-            by_category[r["category"]] = by_category.get(r["category"], 0) + r["amount"]
+            cat_clean = r["category"].strip().title()
+            by_category[cat_clean] = by_category.get(cat_clean, 0) + r["amount"]
+            by_cat_lower[cat_clean.lower()] = by_cat_lower.get(cat_clean.lower(), 0) + r["amount"]
 
     today = date.today()
     if (today.year, today.month) == (year, mon):
@@ -296,15 +303,34 @@ def summary(month: Optional[str] = None):
     projected = calc.forecast(expense, day, days_in_month)
 
     budget_status, alerts, exceeded = [], [], 0
+
+    # 1. High-priority Overspending / Negative Balance Alerts
+    if income > 0 and expense > income:
+        over = expense - income
+        alerts.append(f"🚨 CRITICAL OVERSPENDING: Total spent (₹{expense:,.0f}) exceeds your income (₹{income:,.0f}) by ₹{over:,.0f}! You are in negative balance (-₹{over:,.0f}).")
+    elif income == 0 and expense > 0:
+        alerts.append(f"⚠️ NEGATIVE BALANCE: You have spent ₹{expense:,.0f} this month with zero recorded income (Balance: -₹{expense:,.0f}).")
+
+    if projected > income and income > 0:
+        alerts.append(f"📈 FORECAST ALERT: At your current daily pace, month-end spending will reach ₹{projected:,.0f}, exceeding your income by ₹{projected - income:,.0f}.")
+
+    # 2. Case-Insensitive Category Budget Matching & Alerts
     for cat, limit in budgets.items():
-        spent = by_category.get(cat, 0)
-        pct = spent / limit * 100
-        budget_status.append({"category": cat, "limit": limit, "spent": round(spent, 2), "percent": round(pct)})
+        cat_clean = cat.strip().title()
+        spent = by_cat_lower.get(cat.strip().lower(), 0)
+        pct = (spent / limit * 100) if limit > 0 else 0
+        budget_status.append({
+            "category": cat_clean,
+            "limit": limit,
+            "spent": round(spent, 2),
+            "percent": round(pct)
+        })
         if pct >= 100:
             exceeded += 1
-            alerts.append(f"{cat}: budget exceeded ({pct:.0f}% used)")
+            alerts.append(f"🔴 {cat_clean}: Budget exceeded ({pct:.0f}% used - spent ₹{spent:,.0f} of ₹{limit:,.0f} limit)")
         elif pct >= 80:
-            alerts.append(f"{cat}: {pct:.0f}% of budget used")
+            alerts.append(f"🟡 {cat_clean}: High spending ({pct:.0f}% used - spent ₹{spent:,.0f} of ₹{limit:,.0f} limit)")
+
     discipline = 1 - exceeded / len(budgets) if budgets else 1
 
     total_budget = sum(budgets.values())
@@ -317,7 +343,7 @@ def summary(month: Optional[str] = None):
 
     return {
         "month": month, "income": round(income, 2), "expense": round(expense, 2),
-        "balance": round(income - expense, 2), "by_category": by_category,
+        "balance": round(balance, 2), "by_category": by_category,
         "budget_status": budget_status, "alerts": alerts,
         "forecast": {"projected": projected, "day": day, "days": days_in_month},
         "daily_allowance": daily_allowance, "total_budget": total_budget,
